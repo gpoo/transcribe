@@ -69,8 +69,9 @@ class Transcribe:
         title = '%s - %s' % (self.APP_NAME, os.path.basename(filename))
         self.window.set_title(title)
 
-        self.playbin = Gst.ElementFactory.make('playbin', None)
-        self.playbin.set_property('uri', 'file://%s' % filename)
+        self.playbin = Pipeline()
+        self.playbin.set_file('file://%s' % filename)
+
         self.bus = self.playbin.get_bus()
         self.bus.add_signal_watch()
 
@@ -83,25 +84,21 @@ class Transcribe:
         # constantly until the information is available.
         # This trick (PLAYING/PAUSED) is useful to set a different speed,
         # otherwise it does not work.
-        self.playbin.set_state(Gst.State.PLAYING)
-        self.playbin.set_state(Gst.State.PAUSED)
+        self.playbin.play()
+        self.playbin.pause()
         GObject.timeout_add(200, self.update_audio_duration)
 
         self.is_playing = False
 
     def on_window_delete_event(self, *args):
         """Release resources and quit the application."""
-        self.playbin.set_state(Gst.State.NULL)
+        self.playbin.disable()
         self.is_playing = False
         Gtk.main_quit(*args)
 
     def on_audio_slider_change(self, slider, *args):
         seek_time_secs = slider.get_value()
-        speed = self.speed_slider.get_value()
-        self.playbin.seek(speed, Gst.Format.TIME,
-                          Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
-                          Gst.SeekType.SET, seek_time_secs * Gst.SECOND,
-                          Gst.SeekType.NONE, -1)
+        self.playbin.seek_simple(seek_time_secs)
         self.label_time.set_text(self.time_to_string(seek_time_secs))
 
     def on_bus_duration_changed(self, bus, message):
@@ -111,49 +108,42 @@ class Transcribe:
         self.update_audio_duration()
 
     def on_bus_finished(self, bus, message):
-        self.playbin.set_state(Gst.State.PAUSED)
+        self.playbin.pause()
         self.play_button.set_image(self.PLAY_IMAGE)
         self.is_playing = False
         # Go to beginning of the audio, but keep the slider at the end
         # for informational purposes. If the user press play, it will
         # re-start automatically from the beginning.
-        self.playbin.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, 0)
+        self.playbin.seek_simple(0)
 
     def on_speed_slider_change(self, slider, *args):
+        seek_time_secs = self.audio_slider.get_value()
         speed = slider.get_value()
-
-        p_state, nanosecs = self.playbin.query_position(Gst.Format.TIME)
-        seek_time_secs = float(nanosecs) / Gst.SECOND
-
-        if not p_state:
-            seek_time_secs = self.audio_slider.get_value()
-
-        self.playbin.seek(speed, Gst.Format.TIME,
-                          Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
-                          Gst.SeekType.SET, seek_time_secs * Gst.SECOND,
-                          Gst.SeekType.NONE, -1)
+        self.playbin.set_speed(speed)
+        # Hack. GStreamer (or pitch) gets lost when the speed changes
+        self.playbin.seek_simple(seek_time_secs)
 
     def on_play_activate(self, *args):
         if not self.is_playing:
             self.play_button.set_image(self.PAUSE_IMAGE)
             self.is_playing = True
 
-            self.playbin.set_state(Gst.State.PLAYING)
+            self.playbin.play()
 
             seek_time_secs = self.audio_slider.get_value() - self.leading_time
             seek_time_secs = seek_time_secs if seek_time_secs > 0 else 0
+
             speed = self.speed_slider.get_value()
-            self.playbin.seek(speed, Gst.Format.TIME,
-                          Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
-                          Gst.SeekType.SET, seek_time_secs * Gst.SECOND,
-                          Gst.SeekType.NONE, -1)
+            self.playbin.set_speed(speed)
+
+            self.playbin.seek_simple(seek_time_secs)
 
             GObject.timeout_add(100, self.update_audio_slider)
         else:
             self.play_button.set_image(self.PLAY_IMAGE)
             self.is_playing = False
 
-            self.playbin.set_state(Gst.State.PAUSED)
+            self.playbin.pause()
 
         self.audio_slider.grab_focus()
 
@@ -171,12 +161,10 @@ class Transcribe:
            duration and we should try again later.  This is useful for
            GObject.timeout_add() and similar calls.
         """
-        state, duration_nsecs = self.playbin.query_duration(Gst.Format.TIME)
+        state, duration = self.playbin.query_duration()
 
         if not state:
             return True  # continue checking
-
-        duration = float(duration_nsecs) / Gst.SECOND
 
         self.audio_slider.set_range(0, duration)
         self.label_duration.set_text(self.time_to_string(duration))
@@ -188,13 +176,11 @@ class Transcribe:
             # Remove this timer event
             return False
 
-        pipe_state, nanosecs = self.playbin.query_position(Gst.Format.TIME)
+        pipe_state, position = self.playbin.query_position()
 
         # pipeline is not ready and does not know position
         if not pipe_state:
             return True
-
-        position = float(nanosecs) / Gst.SECOND
 
         # block seek handler so we don't seek when we set_value()
         self.audio_slider.handler_block_by_func(self.on_audio_slider_change)
@@ -226,6 +212,64 @@ class Transcribe:
     def main(self):
         self.window.show_all()
         Gtk.main()
+
+class Pipeline(Gst.Pipeline):
+    def __init__(self):
+        Gst.Pipeline.__init__(self)
+        self.playbin = Gst.ElementFactory.make('playbin', None)
+        self.add(self.playbin)
+
+        self.speed = Gst.ElementFactory.make('pitch', None)
+        audio_sink = Gst.ElementFactory.make('autoaudiosink', None)
+        audio_convert = Gst.ElementFactory.make('audioconvert', None)
+
+        sbin = Gst.Bin()
+        sbin.add(self.speed)
+        sbin.add(audio_sink)
+        sbin.add(audio_convert)
+        self.speed.link(audio_convert)
+        audio_convert.link(audio_sink)
+
+        sink_pad = Gst.GhostPad.new('sink', self.speed.get_static_pad('sink'))
+        sbin.add_pad(sink_pad)
+
+        self.playbin.set_property('audio-sink', sbin)
+
+    def get_speed(self):
+        return float(self.speed.get_property('tempo'))
+
+    def set_file(self, uri):
+        self.playbin.set_property('uri', uri)
+
+    def set_speed(self, speed):
+        self.speed.set_property('tempo', speed)
+
+    def set_volume(self, volume):
+        self.playbin.set_property('volume', volume)
+
+    def disable(self):
+        self.set_state(Gst.State.NULL)
+
+    def play(self):
+        self.set_state(Gst.State.PLAYING)
+
+    def pause(self):
+        self.set_state(Gst.State.PAUSED)
+
+    def query_position(self, format_time=Gst.Format.TIME):
+        pipe_state, nanosecs = self.playbin.query_position(Gst.Format.TIME)
+        position = float(nanosecs) * self.get_speed() / Gst.SECOND
+        return pipe_state, position
+
+    def query_duration(self, format_time=Gst.Format.TIME):
+        pipe_state, nanosecs = self.playbin.query_duration(format_time)
+        duration = float(nanosecs) / Gst.SECOND
+        return pipe_state, duration
+
+    def seek_simple(self, position, flags=Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT):
+        """A wrapper for Playbin simple_seek"""
+        pos = float(position) / self.get_speed() * Gst.SECOND
+        self.playbin.seek_simple(Gst.Format.TIME, flags, pos)
 
 
 if __name__ == '__main__':
