@@ -32,6 +32,7 @@ class Transcribe:
     APP_NAME = 'Transcribe'
     PLAY_IMAGE = Gtk.Image(stock=Gtk.STOCK_MEDIA_PLAY)
     PAUSE_IMAGE = Gtk.Image(stock=Gtk.STOCK_MEDIA_PAUSE)
+    leading_time = 3 # After a pause, start 3 seconds before it was stopped
 
     def __init__(self, filename, ui='transcribe.ui', *args):
         builder = Gtk.Builder()
@@ -132,12 +133,21 @@ class Transcribe:
                           Gst.SeekType.SET, seek_time_secs * Gst.SECOND,
                           Gst.SeekType.NONE, -1)
 
-    def on_play_activate (self, *args):
+    def on_play_activate(self, *args):
         if not self.is_playing:
             self.play_button.set_image(self.PAUSE_IMAGE)
             self.is_playing = True
 
             self.playbin.set_state(Gst.State.PLAYING)
+
+            seek_time_secs = self.audio_slider.get_value() - self.leading_time
+            seek_time_secs = seek_time_secs if seek_time_secs > 0 else 0
+            speed = self.speed_slider.get_value()
+            self.playbin.seek(speed, Gst.Format.TIME,
+                          Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
+                          Gst.SeekType.SET, seek_time_secs * Gst.SECOND,
+                          Gst.SeekType.NONE, -1)
+
             GObject.timeout_add(100, self.update_audio_slider)
         else:
             self.play_button.set_image(self.PLAY_IMAGE)
