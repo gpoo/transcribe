@@ -219,30 +219,48 @@ class Pipeline(Gst.Pipeline):
         self.playbin = Gst.ElementFactory.make('playbin', None)
         self.add(self.playbin)
 
-        self.speed = Gst.ElementFactory.make('pitch', None)
-        audio_sink = Gst.ElementFactory.make('autoaudiosink', None)
-        audio_convert = Gst.ElementFactory.make('audioconvert', None)
+        # Try the plug-ing 'pitch' to control the speed and pitch (tempo).
+        # If not present, then use speed without pitch as fallback.
+        try:
+            self.pitch = Gst.ElementFactory.make('pitch', None)
+            audio_sink = Gst.ElementFactory.make('autoaudiosink', None)
+            audio_convert = Gst.ElementFactory.make('audioconvert', None)
 
-        sbin = Gst.Bin()
-        sbin.add(self.speed)
-        sbin.add(audio_sink)
-        sbin.add(audio_convert)
-        self.speed.link(audio_convert)
-        audio_convert.link(audio_sink)
+            sbin = Gst.Bin()
+            sbin.add(self.pitch)
+            sbin.add(audio_sink)
+            sbin.add(audio_convert)
+            self.pitch.link(audio_convert)
+            audio_convert.link(audio_sink)
 
-        sink_pad = Gst.GhostPad.new('sink', self.speed.get_static_pad('sink'))
-        sbin.add_pad(sink_pad)
+            sink_pad = Gst.GhostPad.new('sink', self.pitch.get_static_pad('sink'))
+            sbin.add_pad(sink_pad)
 
-        self.playbin.set_property('audio-sink', sbin)
+            self.playbin.set_property('audio-sink', sbin)
+
+            self.speed = float(self.pitch.get_property('tempo'))
+        except:
+            self.pitch = None
+            self.speed = 1.0
 
     def get_speed(self):
-        return float(self.speed.get_property('tempo'))
+        if self.pitch:
+            return float(self.pitch.get_property('tempo'))
+        else:
+            return self.speed
 
     def set_file(self, uri):
         self.playbin.set_property('uri', uri)
 
     def set_speed(self, speed):
-        self.speed.set_property('tempo', speed)
+        if self.pitch:
+            self.pitch.set_property('tempo', speed)
+        else:
+            self.playbin.seek(speed, Gst.Format.TIME,
+                              Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT,
+                              Gst.SeekType.NONE, -1,
+                              Gst.SeekType.NONE, -1)
+        self.speed = speed
 
     def set_volume(self, volume):
         self.playbin.set_property('volume', volume)
@@ -257,8 +275,10 @@ class Pipeline(Gst.Pipeline):
         self.set_state(Gst.State.PAUSED)
 
     def query_position(self, format_time=Gst.Format.TIME):
+        # Only with pitch the position is sensible to tempo.
+        speed = self.get_speed() if self.pitch else 1.0
         pipe_state, nanosecs = self.playbin.query_position(Gst.Format.TIME)
-        position = float(nanosecs) * self.get_speed() / Gst.SECOND
+        position = float(nanosecs) * speed / Gst.SECOND
         return pipe_state, position
 
     def query_duration(self, format_time=Gst.Format.TIME):
@@ -268,8 +288,13 @@ class Pipeline(Gst.Pipeline):
 
     def seek_simple(self, position, flags=Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT):
         """A wrapper for Playbin simple_seek"""
-        pos = float(position) / self.get_speed() * Gst.SECOND
-        self.playbin.seek_simple(Gst.Format.TIME, flags, pos)
+        if self.pitch:
+            pos = float(position) / self.get_speed() * Gst.SECOND
+            self.playbin.seek_simple(Gst.Format.TIME, flags, pos)
+        else:
+            pos = float(position) * Gst.SECOND
+            self.playbin.seek(self.speed, Gst.Format.TIME, flags,
+                              Gst.SeekType.SET, pos, Gst.SeekType.NONE, -1)
 
 
 if __name__ == '__main__':
