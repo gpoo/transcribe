@@ -254,6 +254,9 @@ class Pipeline(Gst.Pipeline):
         else:
             return self.speed
 
+    def get_volume(self, volume):
+        return float(self.playbin.get_property('volume'))
+
     def set_file(self, uri):
         self.playbin.set_property('uri', uri)
 
