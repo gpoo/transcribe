@@ -59,10 +59,12 @@ class Transcribe:
         self.speed_slider.set_value(1.00)
         self.speed_slider.add_mark(1.00, Gtk.PositionType.BOTTOM, None)
         self.speed_slider.connect('value-changed', self.on_speed_slider_change)
+        self.speed_slider.connect('grab-focus', self.on_speed_slider_grab_focus)
         box_speed.pack_start(self.speed_slider, True, True, 0)
 
         self.add_accelerator(self.play_button, 'p', 'clicked')
         self.add_accelerator(self.play_button, 'space', 'clicked')
+        self.add_accelerator(self.speed_slider, 's', 'grab-focus')
 
         builder.connect_signals(self)
 
@@ -122,6 +124,9 @@ class Transcribe:
         self.playbin.set_speed(speed)
         # Hack. GStreamer (or pitch) gets lost when the speed changes
         self.playbin.seek_simple(seek_time_secs)
+
+    def on_speed_slider_grab_focus(self, *args):
+        pass
 
     def on_play_activate(self, *args):
         if not self.is_playing:
