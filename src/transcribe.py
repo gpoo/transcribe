@@ -54,7 +54,7 @@ class Transcribe:
         self.speed_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
         # self.speed_slider = builder.get_object('speed_slider')
         self.speed_slider.set_digits(2)
-        self.speed_slider.set_range(0.01, 3)
+        self.speed_slider.set_range(0.10, 3)
         self.speed_slider.set_increments(0.01, 0.05)
         self.speed_slider.set_value(1.00)
         self.speed_slider.add_mark(1.00, Gtk.PositionType.BOTTOM, None)
