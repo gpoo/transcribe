@@ -54,13 +54,16 @@ class Pipeline(Gst.Pipeline):
             self.pitch = None
             self.speed = 1.0
 
+    def get_file(self):
+        return self.playbin.get_property('uri')
+
     def get_speed(self):
         if self.pitch:
             return float(self.pitch.get_property('tempo'))
         else:
             return self.speed
 
-    def get_volume(self, volume):
+    def get_volume(self):
         return float(self.playbin.get_property('volume'))
 
     def set_file(self, uri):
