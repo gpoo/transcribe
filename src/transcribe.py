@@ -28,6 +28,10 @@ class Transcribe:
     PLAY_IMAGE = Gtk.Image(stock=Gtk.STOCK_MEDIA_PLAY)
     PAUSE_IMAGE = Gtk.Image(stock=Gtk.STOCK_MEDIA_PAUSE)
     leading_time = 3 # After a pause, start 3 seconds before it was stopped
+    AUDIO_STEP = 1.0
+    AUDIO_PAGE = 10.0
+    SPEED_STEP = 0.01
+    SPEED_PAGE = 0.05
 
     def __init__(self, filename, ui='transcribe.ui', *args):
         builder = Gtk.Builder()
@@ -43,14 +47,14 @@ class Transcribe:
 
         self.audio_slider = builder.get_object('audio_slider')
         #self.audio_slider.set_range(0, 100)
-        self.audio_slider.set_increments(1, 10)
+        self.audio_slider.set_increments(self.AUDIO_STEP, self.AUDIO_PAGE)
 
         box_speed = builder.get_object('box_speed')
         self.speed_slider = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL)
         # self.speed_slider = builder.get_object('speed_slider')
         self.speed_slider.set_digits(2)
         self.speed_slider.set_range(0.10, 3)
-        self.speed_slider.set_increments(0.01, 0.05)
+        self.speed_slider.set_increments(self.SPEED_STEP, self.SPEED_PAGE)
         self.speed_slider.set_value(1.00)
         self.speed_slider.add_mark(1.00, Gtk.PositionType.BOTTOM, None)
         self.speed_slider.connect('value-changed', self.on_speed_slider_change)
