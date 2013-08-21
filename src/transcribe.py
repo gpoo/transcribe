@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os.path
-from gi.repository import Gtk, GObject, Gdk
+from gi.repository import Gtk, GObject, Gdk, GLib
 import pipeline
 
 class Transcribe:
@@ -142,7 +142,12 @@ class Transcribe:
         if event.state != 0 and (event.state & Gdk.ModifierType.CONTROL_MASK):
             if event.keyval == Gdk.KEY_t:
                 self.add_audio_mark()
-                return True
+            if event.keyval == Gdk.KEY_s:
+                self.save_transcription(self.textbuffer)
+            else:
+                return False
+            return True
+                
 
         return False
 
@@ -280,6 +285,13 @@ class Transcribe:
 
         time_string = '%0d:%02d:%02d.%03d' % (hours, minutes, seconds, ms)
         return time_string
+
+    def save_transcription(self, buffer, fname='transcription.txt'):
+        start, end = buffer.get_start_iter(), buffer.get_end_iter()
+
+        content = buffer.get_text(start, end, include_hidden_chars=True)
+
+        result = GLib.file_set_contents(fname, content)
 
     def main(self):
         self.window.show_all()
