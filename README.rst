@@ -4,12 +4,13 @@ Audio Transcription Tool
 ``transcribe`` is a tool to assist the transcription of audio data.  It
 is originally oriented to help to qualitative research process.
 
-``transcribe`` goal is to be simple and easy to use.  It's basic features
+``transcribe`` goal is to be simple and easy to use.  Its basic features
 includes:
 
 - Variable speed playback.
 - Replay some seconds before pause.
 - Input audio can be any format supported by `GStreamer`_.
+- Constant pitch when using variable speed.
 
 I started ``transcribe`` as a toy project because I needed a tool
 to transcribe my interviews in Linux.  Audacity was overkill, it 
@@ -21,7 +22,6 @@ file, a play/pause button and a speed slider (to set the speed playback).
 
 Some nice enhancements would be:
 
-- Constant pitch (when using variable speed)
 - Add foot-pedals support
 - Add a simple text editor in the tool
 - Add hotkeys that allows the use of the tool with an external editor
