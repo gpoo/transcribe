@@ -30,6 +30,11 @@ try:
 except ImportError, e:
     from transcribe import transcribe
 
-filename = os.path.realpath(sys.argv[1])
+try:
+    filename = os.path.realpath(sys.argv[1])
+except:
+    print >>sys.stderr, 'Usage: transcribe <audio-file>'
+    sys.exit(0)
+
 ui = transcribe.Transcribe(filename)
 ui.main()
