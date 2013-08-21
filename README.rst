@@ -23,7 +23,6 @@ file, a play/pause button and a speed slider (to set the speed playback).
 Some nice enhancements would be:
 
 - Add foot-pedals support
-- Add a simple text editor in the tool
 - Add hotkeys that allows the use of the tool with an external editor
 - Add annotation and/or tagging (i.e. to add a note in a specific time of
   the audio)

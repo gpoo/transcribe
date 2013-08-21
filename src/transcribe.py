@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os.path
-from gi.repository import Gtk, GObject
+from gi.repository import Gtk, GObject, Gdk
 import pipeline
 
 class Transcribe:
@@ -40,6 +40,10 @@ class Transcribe:
 
         self.window = builder.get_object('window')
         self.window.add_accel_group(self.accelerators)
+
+        self.textview = builder.get_object('textview')
+        self.textbuffer = builder.get_object('textbuffer')
+        action_group = builder.get_object('TranscribeActions')
 
         self.play_button = builder.get_object('play_button')
         self.label_time = builder.get_object('label_time')
@@ -61,9 +65,13 @@ class Transcribe:
         self.speed_slider.connect('grab-focus', self.on_speed_slider_grab_focus)
         box_speed.pack_start(self.speed_slider, True, True, 0)
 
-        self.add_accelerator(self.play_button, 'p', 'clicked')
-        self.add_accelerator(self.play_button, 'space', 'clicked')
-        self.add_accelerator(self.speed_slider, 's', 'grab-focus')
+        self.window.add_events(Gdk.EventType.KEY_PRESS | Gdk.EventType.KEY_RELEASE)
+        self.window.connect('key-press-event', self.on_window_key_press)
+        self.add_accelerator(self.play_button, '<ctrl>p', 'clicked')
+        self.add_accelerator(self.play_button, '<ctrl>space', 'clicked')
+        self.add_accelerator(self.speed_slider, '<alt>s', 'grab-focus')
+        self.add_accelerator(self.audio_slider, '<alt>a', 'grab-focus')
+        self.add_accelerator(self.textview, '<alt>t', 'grab-focus')
 
         builder.connect_signals(self)
 
@@ -93,9 +101,71 @@ class Transcribe:
 
     def on_window_delete_event(self, *args):
         """Release resources and quit the application."""
+        dialog = Gtk.MessageDialog(self.window, Gtk.DialogFlags.MODAL,
+                                   Gtk.MessageType.INFO,
+                                   Gtk.ButtonsType.YES_NO,
+                                   'There are pending changes.')
+        dialog.format_secondary_text('Do you really want to close the application?')
+        response = dialog.run()
+        dialog.destroy()
+
+        if response != Gtk.ResponseType.YES:
+            "Don't close the window, go back to the application"
+            return True
+        
         self.playbin.disable()
         self.is_playing = False
         Gtk.main_quit(*args)
+
+    def on_window_key_press(self, window, event, *args):
+        """Handle global keystrokes to move the sliders"""
+        
+        # We handle Mod1 (Alt)
+        if event.state != 0 and (event.state & Gdk.ModifierType.MOD1_MASK):
+            if event.keyval == Gdk.KEY_Right:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos + self.AUDIO_STEP)
+            elif event.keyval == Gdk.KEY_Left:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos - self.AUDIO_STEP)
+            if event.keyval == Gdk.KEY_Page_Up:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos + self.AUDIO_PAGE)
+            elif event.keyval == Gdk.KEY_Page_Down:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos - self.AUDIO_PAGE)
+            else:
+                return False
+            return True
+
+        # We handle Ctrl
+        if event.state != 0 and (event.state & Gdk.ModifierType.CONTROL_MASK):
+            if event.keyval == Gdk.KEY_t:
+                self.add_audio_mark()
+                return True
+
+        return False
+
+    def on_textbuffer_begin_user_action(self, text_buffer, *args):
+        """TODO: Mark the audio position."""
+        pass
+
+    def add_audio_mark(self):
+        """Add a text with the current audio position"""
+        pipe_state, position = self.playbin.query_position()
+
+        # pipeline is not ready and does not know position
+        if not pipe_state:
+            return True
+
+        label = '[%s] ' % self.time_to_string(position).split('.')[0]
+        mark = self.textbuffer.get_insert()
+        iter = self.textbuffer.get_iter_at_mark(mark)
+
+        if self.textbuffer.get_char_count() > 0:
+            self.textbuffer.insert(iter, '\n')
+
+        self.textbuffer.insert(iter, label)
 
     def on_audio_slider_change(self, slider, *args):
         seek_time_secs = slider.get_value()
@@ -148,8 +218,6 @@ class Transcribe:
             self.is_playing = False
 
             self.playbin.pause()
-
-        self.audio_slider.grab_focus()
 
     def add_accelerator(self, widget, accelerator, signal='activate'):
         """Adds a keyboard shortcut to widget for a given signal."""
