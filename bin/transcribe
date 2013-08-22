@@ -21,14 +21,8 @@
 
 import sys
 import os.path
-from gi.repository import Gtk
 
-# Import from src first so that we can run directly from the source tree for
-# development.
-try:
-    from src import transcribe
-except ImportError as e:
-    from transcribe import transcribe
+from transcribe import transcribe
 
 try:
     filename = os.path.realpath(sys.argv[1])
