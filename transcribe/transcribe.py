@@ -21,7 +21,7 @@
 
 import os.path
 from gi.repository import Gtk, GObject, Gdk, GLib, GtkSource
-import pipeline
+from . import pipeline
 
 class Transcribe:
     APP_NAME = 'Transcribe'
