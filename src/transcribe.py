@@ -20,7 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os.path
-from gi.repository import Gtk, GObject, Gdk, GLib
+from gi.repository import Gtk, GObject, Gdk, GLib, GtkSource
 import pipeline
 
 class Transcribe:
@@ -41,9 +41,16 @@ class Transcribe:
         self.window = builder.get_object('window')
         self.window.add_accel_group(self.accelerators)
 
-        self.textview = builder.get_object('textview')
-        self.textbuffer = builder.get_object('textbuffer')
-        action_group = builder.get_object('TranscribeActions')
+        sw = builder.get_object('scrolledwindow')
+
+        self.textbuffer = GtkSource.Buffer()
+        self.lm = GtkSource.LanguageManager()
+        self.textbuffer.set_language(self.lm.get_language('markdown'))
+
+        self.sourceview = GtkSource.View.new_with_buffer(self.textbuffer)
+        self.sourceview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.sourceview.set_show_line_marks(True)
+        sw.add(self.sourceview)
 
         self.play_button = builder.get_object('play_button')
         self.label_time = builder.get_object('label_time')
@@ -71,7 +78,7 @@ class Transcribe:
         self.add_accelerator(self.play_button, '<ctrl>space', 'clicked')
         self.add_accelerator(self.speed_slider, '<alt>s', 'grab-focus')
         self.add_accelerator(self.audio_slider, '<alt>a', 'grab-focus')
-        self.add_accelerator(self.textview, '<alt>t', 'grab-focus')
+        self.add_accelerator(self.sourceview, '<alt>t', 'grab-focus')
 
         builder.connect_signals(self)
 
