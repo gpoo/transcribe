@@ -298,7 +298,7 @@ class Transcribe:
 
         content = buffer.get_text(start, end, include_hidden_chars=True)
 
-        result = GLib.file_set_contents(fname, content)
+        result = GLib.file_set_contents(fname, bytes(content))
 
     def main(self):
         self.window.show_all()
