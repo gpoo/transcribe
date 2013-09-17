@@ -170,12 +170,12 @@ class Transcribe:
         if not pipe_state:
             return True
 
-        label = '[%s] ' % self.time_to_string(position).split('.')[0]
+        label = '[%s]' % self.time_to_string(position).split('.')[0]
         mark = self.textbuffer.get_insert()
         iter = self.textbuffer.get_iter_at_mark(mark)
 
-        if self.textbuffer.get_char_count() > 0:
-            self.textbuffer.insert(iter, '\n')
+        #if self.textbuffer.get_char_count() > 0:
+        #    self.textbuffer.insert(iter, '\n')
 
         self.textbuffer.insert(iter, label)
 
