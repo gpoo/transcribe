@@ -126,7 +126,7 @@ class Transcribe:
 
     def on_window_key_press(self, window, event, *args):
         """Handle global keystrokes to move the sliders"""
-        
+
         # We handle Mod1 (Alt)
         if event.state != 0 and (event.state & Gdk.ModifierType.MOD1_MASK):
             if event.keyval == Gdk.KEY_Right:
@@ -279,7 +279,7 @@ class Transcribe:
     def time_to_string(self, tm=0):
         """Return a human readable string of time.
 
-        Keyword argumens:
+        Keyword arguments:
         tm -- time in seconds (with decimals [miliseconds])
         """
         if tm is None:
