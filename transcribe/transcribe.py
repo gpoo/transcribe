@@ -76,6 +76,7 @@ class Transcribe:
         self.window.connect('key-press-event', self.on_window_key_press)
         self.add_accelerator(self.play_button, '<ctrl>p', 'clicked')
         self.add_accelerator(self.play_button, '<ctrl>space', 'clicked')
+        self.add_accelerator(self.play_button, 'F5', 'clicked')
         self.add_accelerator(self.speed_slider, '<alt>s', 'grab-focus')
         self.add_accelerator(self.audio_slider, '<alt>a', 'grab-focus')
         self.add_accelerator(self.sourceview, '<alt>t', 'grab-focus')
@@ -155,6 +156,22 @@ class Transcribe:
                 return False
             return True
                 
+        # Functions keys
+        if event.state == 0:
+            if event.keyval == Gdk.KEY_F6:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos + self.AUDIO_STEP)
+            elif event.keyval == Gdk.KEY_F4:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos - self.AUDIO_STEP)
+            if event.keyval == Gdk.KEY_F7:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos + self.AUDIO_PAGE)
+            elif event.keyval == Gdk.KEY_F3:
+                pos = self.audio_slider.get_value()
+                self.audio_slider.set_value(pos - self.AUDIO_PAGE)
+            if event.keyval == Gdk.KEY_F8:
+                self.add_audio_mark()
 
         return False
 
