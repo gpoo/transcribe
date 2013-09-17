@@ -142,7 +142,7 @@
                   <object class="GtkLabel" id="label_time">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">0:00:00.000</property>
+                    <property name="label" translatable="yes">0:00:00.0</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
                     </attributes>
@@ -169,7 +169,7 @@
                   <object class="GtkLabel" id="label_duration">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">0:00:00.000</property>
+                    <property name="label" translatable="yes">0:00:00.0</property>
                     <attributes>
                       <attribute name="weight" value="bold"/>
                     </attributes>

@@ -288,9 +288,9 @@ class Transcribe:
         hours, rm = divmod(tm, 3600)
         minutes, rm = divmod(rm, 60)
         seconds, ms = divmod(rm, 1)
-        ms = ms * 1000
+        ms = ms * 10 # Get only one digit for miliseconds
 
-        time_string = '%0d:%02d:%02d.%03d' % (hours, minutes, seconds, ms)
+        time_string = '%0d:%02d:%02d.%01d' % (hours, minutes, seconds, ms)
         return time_string
 
     def save_transcription(self, buffer, fname='transcription.txt'):
