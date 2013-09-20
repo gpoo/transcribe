@@ -20,6 +20,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import os.path
+import codecs
 from gi.repository import Gtk, GObject, Gdk, GLib, GtkSource
 from . import pipeline
 
@@ -152,6 +153,8 @@ class Transcribe:
                 self.add_audio_mark()
             if event.keyval == Gdk.KEY_s:
                 self.save_transcription(self.textbuffer)
+            if event.keyval == Gdk.KEY_o:
+                self.load_transcription(self.textbuffer)
             else:
                 return False
             return True
@@ -317,7 +320,23 @@ class Transcribe:
 
         result = GLib.file_set_contents(fname, bytes(content))
 
+    def load_transcription(self, fname='transcription.txt'):
+        start, end = self.textbuffer.get_bounds()
+
+        try:
+            with codecs.open(fname, 'rU', 'utf-8') as f:
+                content = f.read()
+        except IOError:
+            content = u''
+
+        self.textbuffer.delete(start, end)
+        start = self.textbuffer.get_iter_at_offset(0)
+        end = start.copy()
+        self.textbuffer.insert(end, content)
+
+
     def main(self):
+        self.load_transcription()
         self.window.show_all()
         Gtk.main()
 
