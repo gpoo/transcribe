@@ -118,6 +118,7 @@ class Transcribe:
 
     def on_window_delete_event(self, *args):
         """Release resources and quit the application."""
+
         dialog = Gtk.MessageDialog(self.window, Gtk.DialogFlags.MODAL,
                                    Gtk.MessageType.INFO,
                                    Gtk.ButtonsType.YES_NO,
@@ -219,6 +220,7 @@ class Transcribe:
         Keyword arguments:
         textview -- GtkTextView with the text
         iter -- Position in the buffer to look at
+
         """
         tags = iter.get_tags()
         for tag in tags:
@@ -236,14 +238,17 @@ class Transcribe:
         if not pipe_state:
             return True
 
-        label = '#%s#' % self.time_to_string(position)
-        self.add_audio_mark_to_buffer(position, label)
+        time_string = '#%s#' % self.time_to_string(position)
+        self.add_audio_mark_to_buffer(position, time_string)
 
-    def add_audio_mark_to_buffer(self, position, label):
+    def add_audio_mark_to_buffer(self, position, time_string):
         """Add a text with the current audio position into a buffer
-           @position: float number to indicate the position in the audio
-           @label: Text to put as mark in the buffer/audio. Likely
-                   in the format #h:mm:ss.m# (last 'm' is milisecond)
+
+        Keyword arguments:
+        position -- float number to indicate the position in the audio
+        time_string -- Text to put as mark in the buffer/audio. Likely
+                       in the format #h:mm:ss.m# (last 'm' is ms)
+                       
         """
         mark = self.textbuffer.get_insert()
         iter = self.textbuffer.get_iter_at_mark(mark)
@@ -251,7 +256,7 @@ class Transcribe:
         tag = self.textbuffer.create_tag(None)
         tag.set_data('position', position)
 
-        self.textbuffer.insert_with_tags(iter, label, tag)
+        self.textbuffer.insert_with_tags(iter, time_string, tag)
 
     def on_audio_slider_change(self, slider, *args):
         seek_time_secs = slider.get_value()
@@ -261,6 +266,7 @@ class Transcribe:
     def on_bus_duration_changed(self, bus, message):
         """GStreamer notifies us the audio duration has changed,
            therefore we need to update the slider and label
+
         """
         self.update_audio_duration()
 
@@ -307,6 +313,7 @@ class Transcribe:
 
     def add_accelerator(self, widget, accelerator, signal='activate'):
         """Adds a keyboard shortcut to widget for a given signal."""
+
         if accelerator:
             key, mod = Gtk.accelerator_parse(accelerator)
             widget.add_accelerator(signal, self.accelerators, key, mod,
@@ -318,6 +325,7 @@ class Transcribe:
            Return True when the pipeline is not ready yet to give us the
            duration and we should try again later.  This is useful for
            GObject.timeout_add() and similar calls.
+
         """
         state, duration = self.playbin.query_duration()
 
@@ -355,6 +363,7 @@ class Transcribe:
 
         Keyword arguments:
         tm -- time in seconds (with decimals [miliseconds])
+
         """
         if tm is None:
             tm = 0
