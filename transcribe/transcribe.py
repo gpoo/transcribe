@@ -195,14 +195,22 @@ class Transcribe:
         if not pipe_state:
             return True
 
-        label = '[%s]' % self.time_to_string(position).split('.')[0]
+        label = '#%s#' % self.time_to_string(position)
+        self.add_audio_mark_to_buffer(position, label)
+
+    def add_audio_mark_to_buffer(self, position, label):
+        """Add a text with the current audio position into a buffer
+           @position: float number to indicate the position in the audio
+           @label: Text to put as mark in the buffer/audio. Likely
+                   in the format #h:mm:ss.m# (last 'm' is milisecond)
+        """
         mark = self.textbuffer.get_insert()
         iter = self.textbuffer.get_iter_at_mark(mark)
 
-        #if self.textbuffer.get_char_count() > 0:
-        #    self.textbuffer.insert(iter, '\n')
+        tag = self.textbuffer.create_tag(None)
+        tag.set_data('position', position)
 
-        self.textbuffer.insert(iter, label)
+        self.textbuffer.insert_with_tags(iter, label, tag)
 
     def on_audio_slider_change(self, slider, *args):
         seek_time_secs = slider.get_value()
