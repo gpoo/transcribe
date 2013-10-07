@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+ Author: Germán Poo-Caamaño
+ Copyright (C) 2013 Germán Poo-Caamaño <gpoo@gnome.org>
+
+ Transcribe is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
+
+ Transcribe is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+-->
+<!-- Note: this language definition file adds support for Transcribe syntax.
+     Transcribe is a simple audio transcription assistant tool -->
+<language id="transcribe" _name="Transcribe" version="2.0" _section="Others">
+  <metadata>
+    <property name="mimetypes">text/x-transcribe</property>
+    <property name="globs">*.txt;*.transcription;transcription*</property>
+  </metadata>
+
+  <styles>
+    <style id="timestamp" _name="Timestamp" map-to="def:special-char"/>
+    <style id="interlocutor" name="Interlocutor" map-to="def:shebang"/>
+  </styles>
+
+  <definitions>
+
+    <context id="timestamps" style-ref="timestamp">
+      <match extended="false">#\d{1,2}:\d{2}:\d{2}.\d#</match>
+    </context>
+
+    <context id="interlocutors" style-ref="interlocutor">
+      <match extended="false">^.*: </match>
+    </context>
+
+    <context id="transcribe">
+      <include>
+        <context ref="timestamps"/>
+        <context ref="interlocutors"/>
+      </include>
+    </context>
+  </definitions>
+</language>

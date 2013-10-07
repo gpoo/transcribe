@@ -46,7 +46,10 @@ class Transcribe:
 
         self.textbuffer = GtkSource.Buffer()
         self.lm = GtkSource.LanguageManager()
-        self.textbuffer.set_language(self.lm.get_language('markdown'))
+        path = self.lm.get_search_path()
+        path.insert(0, os.path.join(os.path.dirname(__file__)))
+        self.lm.set_search_path(path)
+        self.textbuffer.set_language(self.lm.get_language('transcribe'))
 
         self.sourceview = GtkSource.View.new_with_buffer(self.textbuffer)
         self.sourceview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
