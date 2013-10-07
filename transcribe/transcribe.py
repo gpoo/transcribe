@@ -124,7 +124,7 @@ class Transcribe:
         dialog.destroy()
 
         if response != Gtk.ResponseType.YES:
-            "Don't close the window, go back to the application"
+            # Don't close the window, go back to the application
             return True
         
         self.playbin.disable()
