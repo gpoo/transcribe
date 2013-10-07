@@ -11,6 +11,9 @@ includes:
 - Replay some seconds before pause.
 - Input audio can be any format supported by `GStreamer`_.
 - Constant pitch when using variable speed.
+- Basic text editor with hotkeys.
+- Automatic audio mark placement to navigate through the audio
+  file.
 
 I started ``transcribe`` as a toy project because I needed a tool
 to transcribe my interviews in Linux.  Audacity was overkill, it 
@@ -23,13 +26,10 @@ file, a play/pause button and a speed slider (to set the speed playback).
 Some nice enhancements would be:
 
 - Add foot-pedals support
-- Add hotkeys that allows the use of the tool with an external editor
-- Add annotation and/or tagging (i.e. to add a note in a specific time of
-  the audio)
 - Manage an audio list.  A simple list of audio and text that belongs to
   a same project.
 
-``Transcribe`` requires PyGObject, GTK+3 and `GStreamer`_ 1.0.
+``Transcribe`` requires PyGObject, GTK+3 and `GStreamer`_ 1.0.1.
 
 .. _`GStreamer`: http://gstreamer.freedesktop.org/features/
 
