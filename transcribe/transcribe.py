@@ -33,6 +33,7 @@ class Transcribe:
     AUDIO_PAGE = 4.0
     SPEED_STEP = 0.01
     SPEED_PAGE = 0.05
+    SPACE_BELOW_LINES = 10 # Pixels between paragraphs
 
     def __init__(self, filename, ui='transcribe.ui', *args):
         builder = Gtk.Builder()
@@ -54,6 +55,7 @@ class Transcribe:
         self.sourceview = GtkSource.View.new_with_buffer(self.textbuffer)
         self.sourceview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.sourceview.set_show_line_marks(True)
+        self.sourceview.set_pixels_below_lines (self.SPACE_BELOW_LINES)
         sw.add(self.sourceview)
 
         self.play_button = builder.get_object('play_button')
