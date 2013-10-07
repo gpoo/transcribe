@@ -20,7 +20,7 @@
 
 import gi
 gi.require_version('Gst', '1.0')
-from gi.repository import Gst
+from gi.repository import Gst, GObject
 
 Gst.init(None)
 
@@ -112,3 +112,104 @@ class Pipeline(Gst.Pipeline):
             pos = float(position) * Gst.SECOND
             self.playbin.seek(self.speed, Gst.Format.TIME, flags,
                               Gst.SeekType.SET, pos, Gst.SeekType.NONE, -1)
+
+
+class Audio(GObject.GObject):
+    __gsignals__ = {
+        'update-duration': (GObject.SIGNAL_RUN_FIRST, None, (float,)),
+        'update-position': (GObject.SIGNAL_RUN_FIRST, None, (float,)),
+        'finished': (GObject.SIGNAL_RUN_FIRST, None, ())
+    }
+
+    def __init__(self, filename):
+        GObject.GObject.__init__(self)
+
+        self.playbin = Pipeline()
+        self.playbin.set_file('file://%s' % filename)
+
+        self.bus = self.playbin.get_bus()
+        self.bus.add_signal_watch()
+
+        self.bus.connect('message::eos', self.on_bus_finished)
+        self.bus.connect('message::duration', self.on_bus_duration_changed)
+
+        # We change quickly in order to let us query the pipeline before
+        # playing. The pipeline might take some time (ms) to load or
+        # process the audio file, so we use a timer event to query
+        # constantly until the information is available.
+        # This trick (PLAYING/PAUSED) is useful to set a different speed,
+        # otherwise it does not work.
+        self.playbin.play()
+        self.playbin.pause()
+        GObject.timeout_add(200, self.update_duration)
+
+        self.playing = False
+
+    def stop(self):
+        self.playbin.disable()
+        self.playing = False
+
+    def get_position(self):
+        pipe_state, position = self.playbin.query_position()
+
+        # pipeline is not ready and does not know position
+        if not pipe_state:
+            return -1
+
+        return position
+
+    def on_bus_duration_changed(self, bus, message):
+        """GStreamer notifies us the audio duration has changed,
+           therefore we need to update the slider and label
+
+        """
+        self.update_duration()
+
+    def on_bus_finished(self, bus, message):
+        self.playbin.pause()
+        self.playing = False
+        # Go to beginning of the audio, but keep the slider at the end
+        # for informational purposes. If the user press play, it will
+        # re-start automatically from the beginning.
+        self.playbin.seek_simple(0)
+        self.emit('finished')
+
+    def update_duration(self):
+        """Get audio duration and update the widgets that depends on that.
+
+           Return True when the pipeline is not ready yet to give us the
+           duration and we should try again later.  This is useful for
+           GObject.timeout_add() and similar calls.
+
+        """
+        state, duration = self.playbin.query_duration()
+
+        if not state:
+            return True  # continue checking
+
+        self.emit('update-duration', duration)
+        return False
+
+    def play(self, speed=1.0, position=0):
+        self.playing = True
+
+        self.playbin.play()
+        self.playbin.set_speed(speed)
+        self.playbin.seek_simple(position)
+
+    def pause(self):   
+        self.playbin.pause()
+        self.playing = False
+
+    def seek(self, position):
+        self.playbin.seek_simple(position)
+
+    def set_speed(self, speed):
+        position = self.get_position()
+        self.playbin.set_speed(speed)
+        # Hack. GStreamer (or pitch) gets lost when the speed changes
+        if position >= 0:
+            self.playbin.seek_simple(position)
+
+    def is_playing(self):
+        return self.playing

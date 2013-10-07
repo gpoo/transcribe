@@ -94,27 +94,21 @@ class Transcribe:
 
         title = '%s - %s' % (self.APP_NAME, os.path.basename(filename))
         self.window.set_title(title)
+        
+        self.audio = pipeline.Audio(filename)
+        self.audio.connect('update-duration', self.on_audio_duration)
+        self.audio.connect('finished', self.on_audio_finished)
 
-        self.playbin = pipeline.Pipeline()
-        self.playbin.set_file('file://%s' % filename)
+    def on_audio_duration(self, playbin, duration):
+        """Get audio duration and update the widgets that depends on that.
 
-        self.bus = self.playbin.get_bus()
-        self.bus.add_signal_watch()
+           Return True when the pipeline is not ready yet to give us the
+           duration and we should try again later.  This is useful for
+           GObject.timeout_add() and similar calls.
 
-        self.bus.connect('message::eos', self.on_bus_finished)
-        self.bus.connect('message::duration', self.on_bus_duration_changed)
-
-        # We change quickly in order to let us query the pipeline before
-        # playing. The pipeline might take some time (ms) to load or
-        # process the audio file, so we use a timer event to query
-        # constantly until the information is available.
-        # This trick (PLAYING/PAUSED) is useful to set a different speed,
-        # otherwise it does not work.
-        self.playbin.play()
-        self.playbin.pause()
-        GObject.timeout_add(200, self.update_audio_duration)
-
-        self.is_playing = False
+        """
+        self.audio_slider.set_range(0, duration)
+        self.label_duration.set_text(self.time_to_string(duration))
 
     def on_window_delete_event(self, *args):
         """Release resources and quit the application."""
@@ -131,8 +125,7 @@ class Transcribe:
             # Don't close the window, go back to the application
             return True
         
-        self.playbin.disable()
-        self.is_playing = False
+        self.audio.stop()
         Gtk.main_quit(*args)
 
     def on_window_key_press(self, window, event, *args):
@@ -227,16 +220,15 @@ class Transcribe:
             position = tag.get_data('position')
             if position is not None:
                 self.audio_slider.set_value(position)
-                self.label_time.set_text(self.time_to_string(position))
                 break
 
     def add_audio_mark(self):
         """Add a text with the current audio position"""
-        pipe_state, position = self.playbin.query_position()
+        position = self.audio.get_position()
 
         # pipeline is not ready and does not know position
-        if not pipe_state:
-            return True
+        if position < 0:
+            return
 
         time_string = '#%s#' % self.time_to_string(position)
         self.add_audio_mark_to_buffer(position, time_string)
@@ -260,56 +252,33 @@ class Transcribe:
 
     def on_audio_slider_change(self, slider, *args):
         seek_time_secs = slider.get_value()
-        self.playbin.seek_simple(seek_time_secs)
+        self.audio.seek(seek_time_secs)
         self.label_time.set_text(self.time_to_string(seek_time_secs))
 
-    def on_bus_duration_changed(self, bus, message):
-        """GStreamer notifies us the audio duration has changed,
-           therefore we need to update the slider and label
-
-        """
-        self.update_audio_duration()
-
-    def on_bus_finished(self, bus, message):
-        self.playbin.pause()
+    def on_audio_finished(self, playbin):
         self.play_button.set_image(self.PLAY_IMAGE)
-        self.is_playing = False
-        # Go to beginning of the audio, but keep the slider at the end
-        # for informational purposes. If the user press play, it will
-        # re-start automatically from the beginning.
-        self.playbin.seek_simple(0)
 
     def on_speed_slider_change(self, slider, *args):
-        seek_time_secs = self.audio_slider.get_value()
-        speed = slider.get_value()
-        self.playbin.set_speed(speed)
-        # Hack. GStreamer (or pitch) gets lost when the speed changes
-        self.playbin.seek_simple(seek_time_secs)
+        self.audio.set_speed(slider.get_value())
 
     def on_speed_slider_grab_focus(self, *args):
         pass
 
     def on_play_activate(self, *args):
-        if not self.is_playing:
+        if not self.audio.is_playing():
             self.play_button.set_image(self.PAUSE_IMAGE)
-            self.is_playing = True
-
-            self.playbin.play()
 
             seek_time_secs = self.audio_slider.get_value() - self.leading_time
             seek_time_secs = seek_time_secs if seek_time_secs > 0 else 0
 
             speed = self.speed_slider.get_value()
-            self.playbin.set_speed(speed)
 
-            self.playbin.seek_simple(seek_time_secs)
+            self.audio.play(speed, seek_time_secs)
 
             GObject.timeout_add(100, self.update_audio_slider)
         else:
             self.play_button.set_image(self.PLAY_IMAGE)
-            self.is_playing = False
-
-            self.playbin.pause()
+            self.audio.pause()
 
     def add_accelerator(self, widget, accelerator, signal='activate'):
         """Adds a keyboard shortcut to widget for a given signal."""
@@ -319,41 +288,20 @@ class Transcribe:
             widget.add_accelerator(signal, self.accelerators, key, mod,
                                    Gtk.AccelFlags.VISIBLE)
 
-    def update_audio_duration(self):
-        """Get audio duration and update the widgets that depends on that.
-
-           Return True when the pipeline is not ready yet to give us the
-           duration and we should try again later.  This is useful for
-           GObject.timeout_add() and similar calls.
-
-        """
-        state, duration = self.playbin.query_duration()
-
-        if not state:
-            return True  # continue checking
-
-        self.audio_slider.set_range(0, duration)
-        self.label_duration.set_text(self.time_to_string(duration))
-
-        return False
-
     def update_audio_slider(self):
-        if not self.is_playing:
+        if not self.audio.is_playing():
             # Remove this timer event
             return False
 
-        pipe_state, position = self.playbin.query_position()
+        position = self.audio.get_position()
 
         # pipeline is not ready and does not know position
-        if not pipe_state:
+        if position < 0:
             return True
 
         # block seek handler so we don't seek when we set_value()
         self.audio_slider.handler_block_by_func(self.on_audio_slider_change)
-
         self.audio_slider.set_value(position)
-        self.label_time.set_text(self.time_to_string(position))
-
         self.audio_slider.handler_unblock_by_func(self.on_audio_slider_change)
 
         return True
