@@ -78,6 +78,8 @@ class Transcribe:
         self.speed_slider.connect('grab-focus', self.on_speed_slider_grab_focus)
         box_speed.pack_start(self.speed_slider, True, True, 0)
 
+        self.sourceview.connect("event-after", self.on_view_event_after)
+
         self.window.add_events(Gdk.EventType.KEY_PRESS | Gdk.EventType.KEY_RELEASE)
         self.window.connect('key-press-event', self.on_window_key_press)
         self.add_accelerator(self.play_button, '<ctrl>p', 'clicked')
@@ -183,9 +185,47 @@ class Transcribe:
 
         return False
 
-    def on_textbuffer_begin_user_action(self, text_buffer, *args):
-        """TODO: Mark the audio position."""
-        pass
+    def on_view_event_after(self, textview, event):
+        """Check if click is on an audio mark and jump to position."""
+
+        if event.type != Gdk.EventType.BUTTON_RELEASE:
+            return False
+
+        buffer = textview.get_buffer()
+
+        # we shouldn't follow a link if the user has selected something
+        try:
+            start, end = buffer.get_selection_bounds()
+        except ValueError:
+            # If there is nothing selected, None is return
+            pass
+        else:
+            if start.get_offset() != end.get_offset():
+                return False
+
+        x, y = textview.window_to_buffer_coords(Gtk.TextWindowType.WIDGET,
+                                                int(event.x), int(event.y))
+        iter = textview.get_iter_at_location(x, y)
+        self.follow_if_link(textview, iter)
+
+        return False
+
+    def follow_if_link(self, textview, iter):
+        """Looks at all tags covering the position of iter in the
+           text view, and if one of them is an audio position, update
+           the audio slider.
+
+        Keyword arguments:
+        textview -- GtkTextView with the text
+        iter -- Position in the buffer to look at
+        """
+        tags = iter.get_tags()
+        for tag in tags:
+            position = tag.get_data('position')
+            if position is not None:
+                self.audio_slider.set_value(position)
+                self.label_time.set_text(self.time_to_string(position))
+                break
 
     def add_audio_mark(self):
         """Add a text with the current audio position"""
