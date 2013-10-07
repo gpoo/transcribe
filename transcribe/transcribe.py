@@ -178,7 +178,7 @@ class Transcribe:
             elif event.keyval == Gdk.KEY_F3:
                 pos = self.audio_slider.get_value()
                 self.audio_slider.set_value(pos - self.AUDIO_PAGE)
-            if event.keyval == Gdk.KEY_F8:
+            if event.keyval == Gdk.KEY_F8 or event.keyval == Gdk.KEY_Return:
                 self.add_audio_mark()
 
         return False
