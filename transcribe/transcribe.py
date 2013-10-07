@@ -21,6 +21,7 @@
 
 import os.path
 import codecs
+import re
 from gi.repository import Gtk, GObject, Gdk, GLib, GtkSource
 from . import pipeline
 
@@ -366,6 +367,23 @@ class Transcribe:
         time_string = '%0d:%02d:%02d.%01d' % (hours, minutes, seconds, ms)
         return time_string
 
+    def string_to_time(self, time_string):
+        """Convert a human readable string of time to time in seconds.
+
+        Keyword arguments:
+        time_string -- time in format '%0d:%02d:%02d.%01d'
+
+        """
+        try:
+            (h, m, s, ms) = re.split(r'#(\d{1,2}):(\d{2}):(\d{2}).(\d)#',
+                                     time_string)[1:-1]
+        except:
+            return 0.0
+
+        tm = int(h)*3600 + int(m)*60 + int(s) + float(ms)/10
+
+        return tm
+
     def save_transcription(self, buffer, fname='transcription.txt'):
         start, end = buffer.get_start_iter(), buffer.get_end_iter()
 
@@ -374,18 +392,26 @@ class Transcribe:
         result = GLib.file_set_contents(fname, bytes(content))
 
     def load_transcription(self, fname='transcription.txt'):
-        start, end = self.textbuffer.get_bounds()
+        regex = re.compile(r'#\d{1,2}:\d{2}:\d{2}.\d#')
 
         try:
             with codecs.open(fname, 'rU', 'utf-8') as f:
-                content = f.read()
-        except IOError:
-            content = u''
+                start, end = self.textbuffer.get_bounds()
+                self.textbuffer.delete(start, end)
+                for line in f.readlines():
+                    audio_marks = regex.findall(line)
+                    audio_marks.reverse()
+                    for text in regex.split(line):
+                        end = self.textbuffer.get_end_iter()
+                        self.textbuffer.insert(end, text)
 
-        self.textbuffer.delete(start, end)
-        start = self.textbuffer.get_iter_at_offset(0)
-        end = start.copy()
-        self.textbuffer.insert(end, content)
+                        # insert audio mark if any
+                        if len(audio_marks) > 0:
+                            mark = audio_marks.pop()
+                            position = self.string_to_time(mark)
+                            self.add_audio_mark_to_buffer(position, mark)
+        except IOError:
+            content = ''
 
 
     def main(self):
