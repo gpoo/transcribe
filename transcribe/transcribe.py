@@ -30,7 +30,7 @@ class Transcribe:
     PAUSE_IMAGE = Gtk.Image(stock=Gtk.STOCK_MEDIA_PAUSE)
     leading_time = 3 # After a pause, start 3 seconds before it was stopped
     AUDIO_STEP = 1.0
-    AUDIO_PAGE = 10.0
+    AUDIO_PAGE = 4.0
     SPEED_STEP = 0.01
     SPEED_PAGE = 0.05
 
