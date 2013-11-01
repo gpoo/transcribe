@@ -25,16 +25,17 @@ import re
 from gi.repository import Gtk, GObject, Gdk, GLib, GtkSource
 from . import pipeline
 
+
 class Transcribe:
     APP_NAME = 'Transcribe'
     PLAY_IMAGE = Gtk.Image(stock=Gtk.STOCK_MEDIA_PLAY)
     PAUSE_IMAGE = Gtk.Image(stock=Gtk.STOCK_MEDIA_PAUSE)
-    leading_time = 3 # After a pause, start 3 seconds before it was stopped
+    leading_time = 3  # After a pause, start 3 seconds before it was stopped
     AUDIO_STEP = 1.0
     AUDIO_PAGE = 4.0
     SPEED_STEP = 0.01
     SPEED_PAGE = 0.05
-    SPACE_BELOW_LINES = 10 # Pixels between paragraphs
+    SPACE_BELOW_LINES = 10  # Pixels between paragraphs
 
     def __init__(self, filename, ui='transcribe.ui', *args):
         builder = Gtk.Builder()
@@ -56,7 +57,7 @@ class Transcribe:
         self.sourceview = GtkSource.View.new_with_buffer(self.textbuffer)
         self.sourceview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.sourceview.set_show_line_marks(True)
-        self.sourceview.set_pixels_below_lines (self.SPACE_BELOW_LINES)
+        self.sourceview.set_pixels_below_lines(self.SPACE_BELOW_LINES)
         sw.add(self.sourceview)
 
         self.play_button = builder.get_object('play_button')
@@ -76,12 +77,14 @@ class Transcribe:
         self.speed_slider.set_value(1.00)
         self.speed_slider.add_mark(1.00, Gtk.PositionType.BOTTOM, None)
         self.speed_slider.connect('value-changed', self.on_speed_slider_change)
-        self.speed_slider.connect('grab-focus', self.on_speed_slider_grab_focus)
+        self.speed_slider.connect('grab-focus',
+                                  self.on_speed_slider_grab_focus)
         box_speed.pack_start(self.speed_slider, True, True, 0)
 
         self.sourceview.connect("event-after", self.on_view_event_after)
 
-        self.window.add_events(Gdk.EventType.KEY_PRESS | Gdk.EventType.KEY_RELEASE)
+        self.window.add_events(Gdk.EventType.KEY_PRESS |
+                               Gdk.EventType.KEY_RELEASE)
         self.window.connect('key-press-event', self.on_window_key_press)
         self.add_accelerator(self.play_button, '<ctrl>p', 'clicked')
         self.add_accelerator(self.play_button, '<ctrl>space', 'clicked')
@@ -94,7 +97,7 @@ class Transcribe:
 
         title = '%s - %s' % (self.APP_NAME, os.path.basename(filename))
         self.window.set_title(title)
-        
+
         self.audio = pipeline.Audio(filename)
         self.audio.connect('update-duration', self.on_audio_duration)
         self.audio.connect('finished', self.on_audio_finished)
@@ -113,18 +116,20 @@ class Transcribe:
     def on_window_delete_event(self, *args):
         """Release resources and quit the application."""
 
+        msg = 'Do you really want to close the application?'
+
         dialog = Gtk.MessageDialog(self.window, Gtk.DialogFlags.MODAL,
                                    Gtk.MessageType.INFO,
                                    Gtk.ButtonsType.YES_NO,
                                    'There are pending changes.')
-        dialog.format_secondary_text('Do you really want to close the application?')
+        dialog.format_secondary_text(msg)
         response = dialog.run()
         dialog.destroy()
 
         if response != Gtk.ResponseType.YES:
             # Don't close the window, go back to the application
             return True
-        
+
         self.audio.stop()
         Gtk.main_quit(*args)
 
@@ -160,7 +165,7 @@ class Transcribe:
             else:
                 return False
             return True
-                
+
         # Functions keys
         if event.state == 0:
             if event.keyval == Gdk.KEY_F6:
@@ -240,7 +245,7 @@ class Transcribe:
         position -- float number to indicate the position in the audio
         time_string -- Text to put as mark in the buffer/audio. Likely
                        in the format #h:mm:ss.m# (last 'm' is ms)
-                       
+
         """
         mark = self.textbuffer.get_insert()
         iter = self.textbuffer.get_iter_at_mark(mark)
@@ -319,7 +324,7 @@ class Transcribe:
         hours, rm = divmod(tm, 3600)
         minutes, rm = divmod(rm, 60)
         seconds, ms = divmod(rm, 1)
-        ms = ms * 10 # Get only one digit for miliseconds
+        ms = ms * 10  # Get only one digit for miliseconds
 
         time_string = '%0d:%02d:%02d.%01d' % (hours, minutes, seconds, ms)
         return time_string
@@ -345,8 +350,9 @@ class Transcribe:
         start, end = buffer.get_start_iter(), buffer.get_end_iter()
 
         content = buffer.get_text(start, end, include_hidden_chars=True)
-
         result = GLib.file_set_contents(fname, bytes(content))
+
+        return result
 
     def load_transcription(self, fname='transcription.txt'):
         regex = re.compile(r'#\d{1,2}:\d{2}:\d{2}.\d#')
@@ -369,7 +375,6 @@ class Transcribe:
                             self.add_audio_mark_to_buffer(position, mark)
         except IOError:
             content = ''
-
 
     def main(self):
         self.load_transcription()

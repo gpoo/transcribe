@@ -24,6 +24,7 @@ from gi.repository import Gst, GObject
 
 Gst.init(None)
 
+
 class Pipeline(Gst.Pipeline):
     def __init__(self):
         Gst.Pipeline.__init__(self)
@@ -44,7 +45,8 @@ class Pipeline(Gst.Pipeline):
             self.pitch.link(audio_convert)
             audio_convert.link(audio_sink)
 
-            sink_pad = Gst.GhostPad.new('sink', self.pitch.get_static_pad('sink'))
+            sink_pad = Gst.GhostPad.new('sink',
+                                        self.pitch.get_static_pad('sink'))
             sbin.add_pad(sink_pad)
 
             self.playbin.set_property('audio-sink', sbin)
@@ -103,7 +105,8 @@ class Pipeline(Gst.Pipeline):
         duration = float(nanosecs) / Gst.SECOND
         return pipe_state, duration
 
-    def seek_simple(self, position, flags=Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT):
+    def seek_simple(self, position,
+                    flags=Gst.SeekFlags.FLUSH | Gst.SeekFlags.KEY_UNIT):
         """A wrapper for Playbin simple_seek"""
         if self.pitch:
             pos = float(position) / self.get_speed() * Gst.SECOND
@@ -197,7 +200,7 @@ class Audio(GObject.GObject):
         self.playbin.set_speed(speed)
         self.playbin.seek_simple(position)
 
-    def pause(self):   
+    def pause(self):
         self.playbin.pause()
         self.playing = False
 
