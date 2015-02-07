@@ -251,7 +251,7 @@ class Transcribe:
         iter = self.textbuffer.get_iter_at_mark(mark)
 
         tag = self.textbuffer.create_tag(None)
-        tag.set_data('position', position)
+        tag.position = position
 
         self.textbuffer.insert_with_tags(iter, time_string, tag)
 
