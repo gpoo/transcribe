@@ -22,7 +22,12 @@
 import os.path
 import codecs
 import re
+
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('GtkSource', '4')
 from gi.repository import Gtk, GObject, Gdk, GLib, GtkSource
+
 from . import pipeline
 
 
